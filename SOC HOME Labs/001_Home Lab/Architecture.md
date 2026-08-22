@@ -10,7 +10,7 @@ The lab is three virtual machines under VirtualBox on a single Ubuntu 24.04 host
   ┌─────────────────────┐        ┌──────────────────────┐        ┌─────────────────────────┐
   │   Kali Linux          │        │  Windows 11 Home       │        │  Ubuntu Server 24.04      │
   │   (Attacker)           │        │  (Victim)               │        │  (SIEM)                    │
-  │   192.168.1.122        │        │  192.168.1.188          │        │  192.168.1.125             │
+  │   192.168.x.x        │        │  192.168.x.x          │        │  192.168.x.x             │
   │                         │        │                         │        │                             │
   │                         │  ───▶  │  Sysmon                 │  ───▶  │  Splunk Enterprise          │
   │                         │        │  Splunk Universal        │  TCP   │  - Splunk Web               │
@@ -36,25 +36,23 @@ VirtualBox's default NAT mode hides each VM behind the host's network stack, whi
 
 ## Component roles
 
-### Kali Linux — Attacker (`192.168.1.122`)
+### Kali Linux — Attacker (`192.168.x.x`)
 Source of all offensive activity used to validate detections: RDP brute-force attempts and msfvenom payload generation. Everything Kali does in this lab exists to generate telemetry for the victim/SIEM side to catch — it isn't the subject of the lab, it's the stimulus.
 
-### Windows 11 Home — Victim (`192.168.1.188`)
+### Windows 11 Home — Victim (`192.168.x.x`)
 The monitored endpoint. Runs:
 - **Sysmon** — captures process creation and other system activity at a much higher fidelity than native Windows auditing
 - **Splunk Universal Forwarder** — reads local Windows Event Log channels (Application, Security, System, Sysmon/Operational) per `inputs.conf` and ships them to the indexer over TCP 9997
 
-See [`configs/inputs.conf`](../configs/inputs.conf) for the exact forwarder configuration.
 
-### Ubuntu Server 24.04 — SIEM (`192.168.1.125`)
-Runs **Splunk Enterprise**: Splunk Web, a receiving port on 9997, the `main` index that all forwarded data lands in, and Search & Reporting for detection and investigation. This is where every detection in [`detections/`](../detections) and every investigation in [`investigations/`](../investigations) is actually run.
-
+### Ubuntu Server 24.04 — SIEM (`192.168.x.x`)
+Runs **Splunk Enterprise**: Splunk Web, a receiving port on 9997, the `main` index that all forwarded data lands in, and Search & Reporting for detection and investigation.
 ## Data flow, end to end
 
 1. An action happens on the Windows victim (a process launches, a logon succeeds or fails).
 2. **Sysmon** (for process-level activity) or native **Windows Event Log** (for logon/auth activity) records the event.
 3. The **Splunk Universal Forwarder**, per its `inputs.conf`, picks up the relevant Event Log channel.
-4. The forwarder ships the event over **TCP 9997** to the Ubuntu Splunk Enterprise indexer at `192.168.1.125`.
+4. The forwarder ships the event over **TCP 9997** to the Ubuntu Splunk Enterprise indexer at `192.168.x.x`.
 5. The event lands in `index=main`.
 6. Detections (saved SPL searches) and manual investigation happen against that index in Splunk's Search & Reporting app.
 
